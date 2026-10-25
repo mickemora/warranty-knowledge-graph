@@ -1,0 +1,21 @@
+# id: cq04
+# title: Claims and cost by vehicle system
+# question: How many claims and how much cost does each vehicle system and part category account for?
+# value: Rolls claims up the part taxonomy (skos:broader), so leadership sees cost by system without a hand-built mapping table.
+PREFIX wko:  <https://warranty.example.com/ontology#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?system ?category (COUNT(?claim) AS ?claims)
+       (ROUND(SUM(?cost)) AS ?totalCost) (ROUND(AVG(?cost)) AS ?avgCost)
+WHERE {
+  ?claim a wko:WarrantyClaim ;
+         wko:totalCost ?cost ;
+         wko:referencesPart/wko:hasCategory ?cat ;
+         wko:affectsSystem ?sys .
+  ?cat rdfs:label ?category .
+  ?sys rdfs:label ?system .
+}
+GROUP BY ?system ?category
+ORDER BY DESC(?totalCost)

@@ -1,0 +1,29 @@
+# id: cq09
+# title: Build-month concentration
+# question: For a part, which model / model year / plant / build month has the highest share of vehicles with a claim on it?
+# value: Separates a time-bound production or supplier-lot problem from a design problem, and gives the build window to contain.
+# param: partNumber | string | ^[0-9]{5}-[A-Z0-9]{5}$ | 16100-WP220
+PREFIX wko:  <https://warranty.example.com/ontology#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?model ?modelYear ?plant ?buildMonth (COUNT(DISTINCT ?v) AS ?vehiclesBuilt)
+       (COUNT(DISTINCT ?claimedVehicle) AS ?vehiclesWithClaim)
+       (ROUND(1000 * COUNT(DISTINCT ?claimedVehicle) / COUNT(DISTINCT ?v)) / 10 AS ?claimRatePct)
+WHERE {
+  {
+    SELECT DISTINCT ?p ?model ?modelYear ?plant WHERE {
+      VALUES ?partNumber { "16100-WP220" }
+      ?p wko:partNumber ?partNumber .
+      ?c wko:referencesPart ?p ; wko:claimForVehicle ?cv .
+      ?cv wko:model ?model ; wko:modelYear ?modelYear ; wko:assemblyPlant ?plant .
+    }
+  }
+  ?v wko:model ?model ; wko:modelYear ?modelYear ; wko:assemblyPlant ?plant ; wko:buildDate ?buildDate .
+  BIND(SUBSTR(STR(?buildDate), 1, 7) AS ?buildMonth)
+  OPTIONAL { ?claim wko:claimForVehicle ?v ; wko:referencesPart ?p . BIND(?v AS ?claimedVehicle) }
+}
+GROUP BY ?model ?modelYear ?plant ?buildMonth
+HAVING (COUNT(DISTINCT ?claimedVehicle) > 0)
+ORDER BY DESC(?claimRatePct) ?buildMonth

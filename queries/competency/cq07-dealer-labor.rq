@@ -1,0 +1,29 @@
+# id: cq07
+# title: Dealer labor variance
+# question: Which dealers book more labor than the standard time for the parts they replace?
+# value: Flags dealers for claim audit by comparing booked hours with each part's standard labor time, so the mix of repairs does not distort the comparison.
+# param: minClaims | integer | ^[0-9]{1,3}$ | 10
+PREFIX wko:  <https://warranty.example.com/ontology#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?dealerCode ?dealer ?claims ?avgLaborHours ?laborVsStandard ?avgClaimCost
+WHERE {
+  VALUES ?minClaims { 10 }
+  {
+    SELECT ?d (COUNT(?c) AS ?claims) (AVG(?hours) AS ?avgHours)
+           (AVG(?hours / ?std) AS ?ratio) (AVG(?cost) AS ?avgCost)
+    WHERE {
+      ?c wko:submittedBy ?d ; wko:laborHours ?hours ; wko:totalCost ?cost ;
+         wko:referencesPart/wko:standardLaborHours ?std .
+    }
+    GROUP BY ?d
+  }
+  ?d wko:dealerCode ?dealerCode ; rdfs:label ?dealer .
+  FILTER(?claims >= ?minClaims)
+  BIND(ROUND(?avgHours * 100) / 100 AS ?avgLaborHours)
+  BIND(ROUND(?ratio * 100) / 100 AS ?laborVsStandard)
+  BIND(ROUND(?avgCost) AS ?avgClaimCost)
+}
+ORDER BY DESC(?laborVsStandard)

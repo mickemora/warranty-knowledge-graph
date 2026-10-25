@@ -1,0 +1,28 @@
+# id: cq03
+# title: Related claims
+# question: Which other claims name the same causal part on the same model, and when were those vehicles built?
+# value: The "View related claims" button: turns one claim into a pattern across vehicles, dealers and build dates.
+# param: claimNumber | string | ^C-[0-9]{5,6}$ | C-100245
+PREFIX wko:  <https://warranty.example.com/ontology#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?relatedClaim ?claimDate ?vin ?modelYear ?plant ?buildDate ?dealer ?monthsInService ?failureCode
+WHERE {
+  VALUES ?claimNumber { "C-100245" }
+  ?claim wko:claimNumber ?claimNumber ;
+         wko:referencesPart ?part ;
+         wko:claimForVehicle/wko:model ?model .
+  ?other wko:referencesPart ?part ;
+         wko:claimNumber ?relatedClaim ;
+         wko:claimDate ?claimDate ;
+         wko:failureCode ?failureCode ;
+         wko:monthsInService ?monthsInService ;
+         wko:submittedBy/rdfs:label ?dealer ;
+         wko:claimForVehicle ?ov .
+  ?ov wko:model ?model ; wko:vin ?vin ; wko:modelYear ?modelYear ;
+      wko:assemblyPlant ?plant ; wko:buildDate ?buildDate .
+  FILTER(?other != ?claim)
+}
+ORDER BY ?buildDate

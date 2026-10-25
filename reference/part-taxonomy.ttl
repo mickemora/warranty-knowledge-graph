@@ -1,0 +1,45 @@
+@prefix wko:  <https://warranty.example.com/ontology#> .
+@prefix cat:  <https://warranty.example.com/id/part-category/> .
+@prefix st:   <https://warranty.example.com/id/claim-status/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+#################################################################################################
+# Reference data: the part taxonomy (vehicle system > part category) and claim statuses.
+# Managed as SKOS so business users can add categories without touching the ontology.
+#################################################################################################
+
+cat:scheme a skos:ConceptScheme ;
+    skos:prefLabel "Part taxonomy"@en ;
+    skos:hasTopConcept cat:PT, cat:CH, cat:EL, cat:BD, cat:CL .
+
+# --- vehicle systems (top concepts) ----------------------------------------------------------
+cat:PT a wko:PartCategory ; wko:categoryCode "PT" ; skos:prefLabel "Powertrain"@en ;      rdfs:label "Powertrain" ;      skos:inScheme cat:scheme ; skos:topConceptOf cat:scheme .
+cat:CH a wko:PartCategory ; wko:categoryCode "CH" ; skos:prefLabel "Chassis"@en ;         rdfs:label "Chassis" ;         skos:inScheme cat:scheme ; skos:topConceptOf cat:scheme .
+cat:EL a wko:PartCategory ; wko:categoryCode "EL" ; skos:prefLabel "Electrical"@en ;      rdfs:label "Electrical" ;      skos:inScheme cat:scheme ; skos:topConceptOf cat:scheme .
+cat:BD a wko:PartCategory ; wko:categoryCode "BD" ; skos:prefLabel "Body & Interior"@en ; rdfs:label "Body & Interior" ; skos:inScheme cat:scheme ; skos:topConceptOf cat:scheme .
+cat:CL a wko:PartCategory ; wko:categoryCode "CL" ; skos:prefLabel "Climate"@en ;         rdfs:label "Climate" ;         skos:inScheme cat:scheme ; skos:topConceptOf cat:scheme .
+
+# --- part categories ---------------------------------------------------------------------------
+cat:PT-COOL a wko:PartCategory ; wko:categoryCode "PT-COOL" ; skos:prefLabel "Engine Cooling"@en ;      rdfs:label "Engine Cooling" ;      skos:broader cat:PT ; skos:inScheme cat:scheme .
+cat:PT-ENG  a wko:PartCategory ; wko:categoryCode "PT-ENG"  ; skos:prefLabel "Engine"@en ;              rdfs:label "Engine" ;              skos:broader cat:PT ; skos:inScheme cat:scheme .
+cat:PT-TRN  a wko:PartCategory ; wko:categoryCode "PT-TRN"  ; skos:prefLabel "Transmission"@en ;        rdfs:label "Transmission" ;        skos:broader cat:PT ; skos:inScheme cat:scheme .
+cat:PT-FUEL a wko:PartCategory ; wko:categoryCode "PT-FUEL" ; skos:prefLabel "Fuel System"@en ;         rdfs:label "Fuel System" ;         skos:broader cat:PT ; skos:inScheme cat:scheme .
+cat:CH-BRK  a wko:PartCategory ; wko:categoryCode "CH-BRK"  ; skos:prefLabel "Brakes"@en ;              rdfs:label "Brakes" ;              skos:broader cat:CH ; skos:inScheme cat:scheme .
+cat:CH-SUS  a wko:PartCategory ; wko:categoryCode "CH-SUS"  ; skos:prefLabel "Suspension"@en ;          rdfs:label "Suspension" ;          skos:broader cat:CH ; skos:inScheme cat:scheme .
+cat:CH-STR  a wko:PartCategory ; wko:categoryCode "CH-STR"  ; skos:prefLabel "Steering"@en ;            rdfs:label "Steering" ;            skos:broader cat:CH ; skos:inScheme cat:scheme .
+cat:EL-BAT  a wko:PartCategory ; wko:categoryCode "EL-BAT"  ; skos:prefLabel "Battery & Charging"@en ;  rdfs:label "Battery & Charging" ;  skos:broader cat:EL ; skos:inScheme cat:scheme .
+cat:EL-INF  a wko:PartCategory ; wko:categoryCode "EL-INF"  ; skos:prefLabel "Infotainment"@en ;        rdfs:label "Infotainment" ;        skos:broader cat:EL ; skos:inScheme cat:scheme .
+cat:EL-ADAS a wko:PartCategory ; wko:categoryCode "EL-ADAS" ; skos:prefLabel "Sensors & ADAS"@en ;      rdfs:label "Sensors & ADAS" ;      skos:broader cat:EL ; skos:inScheme cat:scheme .
+cat:EL-LGT  a wko:PartCategory ; wko:categoryCode "EL-LGT"  ; skos:prefLabel "Lighting"@en ;            rdfs:label "Lighting" ;            skos:broader cat:EL ; skos:inScheme cat:scheme .
+cat:BD-HW   a wko:PartCategory ; wko:categoryCode "BD-HW"   ; skos:prefLabel "Body Hardware"@en ;       rdfs:label "Body Hardware" ;       skos:broader cat:BD ; skos:inScheme cat:scheme .
+cat:BD-TRIM a wko:PartCategory ; wko:categoryCode "BD-TRIM" ; skos:prefLabel "Seats & Trim"@en ;        rdfs:label "Seats & Trim" ;        skos:broader cat:BD ; skos:inScheme cat:scheme .
+cat:CL-HVAC a wko:PartCategory ; wko:categoryCode "CL-HVAC" ; skos:prefLabel "HVAC"@en ;                rdfs:label "HVAC" ;                skos:broader cat:CL ; skos:inScheme cat:scheme .
+
+# --- claim statuses ------------------------------------------------------------------------------
+st:scheme a skos:ConceptScheme ; skos:prefLabel "Claim status"@en .
+st:SUBMITTED a wko:ClaimStatus ; skos:notation "SUBMITTED" ; skos:prefLabel "Submitted"@en ;    rdfs:label "Submitted" ;    skos:inScheme st:scheme .
+st:REVIEW    a wko:ClaimStatus ; skos:notation "REVIEW"    ; skos:prefLabel "Under review"@en ; rdfs:label "Under review" ; skos:inScheme st:scheme .
+st:APPROVED  a wko:ClaimStatus ; skos:notation "APPROVED"  ; skos:prefLabel "Approved"@en ;     rdfs:label "Approved" ;     skos:inScheme st:scheme .
+st:PAID      a wko:ClaimStatus ; skos:notation "PAID"      ; skos:prefLabel "Paid"@en ;         rdfs:label "Paid" ;         skos:inScheme st:scheme .
+st:REJECTED  a wko:ClaimStatus ; skos:notation "REJECTED"  ; skos:prefLabel "Rejected"@en ;     rdfs:label "Rejected" ;     skos:inScheme st:scheme .

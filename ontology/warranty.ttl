@@ -1,0 +1,271 @@
+@prefix wko:  <https://warranty.example.com/ontology#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+#################################################################################################
+# Warranty Knowledge Connectivity Pilot: business ontology, version 1.1
+#
+# The shared business vocabulary for warranty: what a claim, vehicle, dealer, part, supplier,
+# customer and repair order are, and how they relate. Version 1.0 is the conceptual model on the
+# pilot infographic. Version 1.1 adds the rules and refinements from the Week 2 stakeholder
+# review (see docs/pilot/week-2-ontology-modeling.md).
+#
+# The constraints that a record must satisfy live in ../shapes/warranty-shapes.ttl (SHACL).
+# This file says what things MEAN; the shapes say what valid data LOOKS LIKE.
+#################################################################################################
+
+<https://warranty.example.com/ontology>
+    a owl:Ontology ;
+    rdfs:label "Warranty business ontology"@en ;
+    dcterms:description "Shared business concepts and relationships for warranty claims, vehicles, dealers, repairs, parts and suppliers."@en ;
+    owl:versionInfo "1.1" ;
+    owl:versionIRI <https://warranty.example.com/ontology/1.1> .
+
+#################################################################################################
+# Classes
+#################################################################################################
+
+wko:BusinessEntity a owl:Class ;
+    rdfs:label "Business entity"@en ;
+    skos:definition "Anything the warranty organization keeps a record of and can identify by a business key."@en .
+
+wko:Party a owl:Class ;
+    rdfs:subClassOf wko:BusinessEntity ;
+    rdfs:label "Party"@en ;
+    skos:definition "A person or organization that takes part in the warranty process."@en .
+
+wko:Organization a owl:Class ;
+    rdfs:subClassOf wko:Party ;
+    rdfs:label "Organization"@en .
+
+wko:WarrantyClaim a owl:Class ;
+    rdfs:subClassOf wko:BusinessEntity ;
+    rdfs:label "Warranty claim"@en ;
+    skos:altLabel "Claim"@en ;
+    skos:definition "A dealer's request to the manufacturer for reimbursement of a repair performed under warranty on a specific vehicle."@en ;
+    skos:example "C-100245" .
+
+wko:Vehicle a owl:Class ;
+    rdfs:subClassOf wko:BusinessEntity ;
+    rdfs:label "Vehicle"@en ;
+    skos:definition "A single built and sold vehicle, identified by its 17-character VIN."@en .
+
+wko:Dealer a owl:Class ;
+    rdfs:subClassOf wko:Organization ;
+    rdfs:label "Dealer"@en ;
+    skos:definition "An authorized retailer that sells and services vehicles and submits warranty claims."@en .
+
+wko:Customer a owl:Class ;
+    rdfs:subClassOf wko:Party ;
+    rdfs:label "Customer"@en ;
+    skos:definition "The registered owner of a vehicle."@en .
+
+wko:Part a owl:Class ;
+    rdfs:subClassOf wko:BusinessEntity ;
+    rdfs:label "Part"@en ;
+    skos:definition "A serviceable component identified by a part number. On a claim it is the causal part: the part judged responsible for the failure."@en .
+
+wko:Supplier a owl:Class ;
+    rdfs:subClassOf wko:Organization ;
+    rdfs:label "Supplier"@en ;
+    skos:definition "A company that manufactures and supplies parts to the OEM."@en .
+
+wko:RepairOrder a owl:Class ;
+    rdfs:subClassOf wko:BusinessEntity ;
+    rdfs:label "Repair order"@en ;
+    skos:altLabel "RO"@en ;
+    skos:definition "The dealer's work record for one service visit: what the customer reported, what was done and which parts were replaced."@en .
+
+wko:PartCategory a owl:Class ;
+    rdfs:subClassOf skos:Concept ;
+    rdfs:label "Part category"@en ;
+    skos:definition "A node in the part taxonomy, for example Engine Cooling within Powertrain. Categories are arranged with skos:broader."@en .
+
+wko:ClaimStatus a owl:Class ;
+    rdfs:subClassOf skos:Concept ;
+    rdfs:label "Claim status"@en .
+
+#################################################################################################
+# Relationships (object properties). Inverse pairs are declared with owl:inverseOf; the load
+# pipeline materializes the inverse triples (see warranty_kg/rules.py) because Neptune stores
+# RDF but does not run an OWL reasoner.
+#################################################################################################
+
+# --- the seven relationships on the v1 conceptual model -------------------------------------
+
+wko:hasClaim a owl:ObjectProperty ;
+    rdfs:label "has claim"@en ;
+    rdfs:domain wko:Vehicle ; rdfs:range wko:WarrantyClaim ;
+    owl:inverseOf wko:claimForVehicle .
+
+wko:claimForVehicle a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:label "claim for vehicle"@en ;
+    rdfs:domain wko:WarrantyClaim ; rdfs:range wko:Vehicle .
+
+wko:submits a owl:ObjectProperty ;
+    rdfs:label "submits"@en ;
+    rdfs:domain wko:Dealer ; rdfs:range wko:WarrantyClaim ;
+    owl:inverseOf wko:submittedBy .
+
+wko:submittedBy a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:label "submitted by"@en ;
+    rdfs:domain wko:WarrantyClaim ; rdfs:range wko:Dealer .
+
+wko:referencesPart a owl:ObjectProperty ;
+    rdfs:label "references (causal part)"@en ;
+    skos:definition "The causal part of a claim."@en ;
+    rdfs:domain wko:WarrantyClaim ; rdfs:range wko:Part ;
+    owl:inverseOf wko:referencedByClaim .
+
+wko:referencedByClaim a owl:ObjectProperty ;
+    rdfs:label "referenced by claim"@en ;
+    rdfs:domain wko:Part ; rdfs:range wko:WarrantyClaim .
+
+wko:basedOn a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:label "based on"@en ;
+    skos:definition "The repair order whose work the claim is reimbursing."@en ;
+    rdfs:domain wko:WarrantyClaim ; rdfs:range wko:RepairOrder ;
+    owl:inverseOf wko:supportsClaim .
+
+wko:supportsClaim a owl:ObjectProperty ;
+    rdfs:label "supports claim"@en ;
+    rdfs:domain wko:RepairOrder ; rdfs:range wko:WarrantyClaim .
+
+wko:supplies a owl:ObjectProperty ;
+    rdfs:label "supplies"@en ;
+    rdfs:domain wko:Supplier ; rdfs:range wko:Part ;
+    owl:inverseOf wko:suppliedBy .
+
+wko:suppliedBy a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:label "supplied by"@en ;
+    rdfs:domain wko:Part ; rdfs:range wko:Supplier .
+
+wko:owns a owl:ObjectProperty ;
+    rdfs:label "owns"@en ;
+    skos:scopeNote "The v1 diagram drew 'owns' between Customer and Dealer. The stakeholder review corrected it: a customer owns a vehicle, and has a preferred (servicing) dealer."@en ;
+    rdfs:domain wko:Customer ; rdfs:range wko:Vehicle ;
+    owl:inverseOf wko:ownedBy .
+
+wko:ownedBy a owl:ObjectProperty ;
+    rdfs:label "owned by"@en ;
+    rdfs:domain wko:Vehicle ; rdfs:range wko:Customer .
+
+# --- added in v1.1 ---------------------------------------------------------------------------
+
+wko:preferredDealer a owl:ObjectProperty ;
+    rdfs:label "preferred dealer"@en ;
+    rdfs:domain wko:Customer ; rdfs:range wko:Dealer .
+
+wko:sellingDealer a owl:ObjectProperty ;
+    rdfs:label "selling dealer"@en ;
+    rdfs:domain wko:Vehicle ; rdfs:range wko:Dealer ;
+    owl:inverseOf wko:sold .
+
+wko:sold a owl:ObjectProperty ;
+    rdfs:label "sold"@en ;
+    rdfs:domain wko:Dealer ; rdfs:range wko:Vehicle .
+
+wko:repairOrderFor a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:label "repair order for"@en ;
+    rdfs:domain wko:RepairOrder ; rdfs:range wko:Vehicle ;
+    owl:inverseOf wko:hasRepairOrder .
+
+wko:hasRepairOrder a owl:ObjectProperty ;
+    rdfs:label "has repair order"@en ;
+    rdfs:domain wko:Vehicle ; rdfs:range wko:RepairOrder .
+
+wko:performedBy a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:label "performed by"@en ;
+    rdfs:domain wko:RepairOrder ; rdfs:range wko:Dealer ;
+    owl:inverseOf wko:performed .
+
+wko:performed a owl:ObjectProperty ;
+    rdfs:label "performed"@en ;
+    rdfs:domain wko:Dealer ; rdfs:range wko:RepairOrder .
+
+wko:replacedPart a owl:ObjectProperty ;
+    rdfs:label "replaced part"@en ;
+    rdfs:domain wko:RepairOrder ; rdfs:range wko:Part .
+
+wko:hasCategory a owl:ObjectProperty ;
+    rdfs:label "has category"@en ;
+    rdfs:domain wko:Part ; rdfs:range wko:PartCategory .
+
+wko:hasStatus a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:label "has status"@en ;
+    rdfs:domain wko:WarrantyClaim ; rdfs:range wko:ClaimStatus .
+
+# --- derived (written only by the materialization rules, never by source data) ---------------
+
+wko:affectsSystem a owl:ObjectProperty ;
+    rdfs:label "affects system"@en ;
+    skos:definition "Derived: the top-level vehicle system (root of the part taxonomy) of the claim's causal part."@en ;
+    rdfs:domain wko:WarrantyClaim ; rdfs:range wko:PartCategory .
+
+#################################################################################################
+# Attributes (datatype properties)
+#################################################################################################
+
+# Every business key is a sub-property of wko:identifier, so search can use one property.
+wko:identifier a owl:DatatypeProperty ;
+    rdfs:label "identifier"@en ;
+    skos:definition "Any business key. Materialized from its sub-properties."@en ;
+    rdfs:range xsd:string .
+
+wko:claimNumber   a owl:DatatypeProperty ; rdfs:subPropertyOf wko:identifier ; rdfs:label "claim number"@en ;   rdfs:domain wko:WarrantyClaim ; rdfs:range xsd:string .
+wko:vin           a owl:DatatypeProperty ; rdfs:subPropertyOf wko:identifier ; rdfs:label "VIN"@en ;            rdfs:domain wko:Vehicle ;       rdfs:range xsd:string .
+wko:dealerCode    a owl:DatatypeProperty ; rdfs:subPropertyOf wko:identifier ; rdfs:label "dealer code"@en ;    rdfs:domain wko:Dealer ;        rdfs:range xsd:string .
+wko:customerId    a owl:DatatypeProperty ; rdfs:subPropertyOf wko:identifier ; rdfs:label "customer ID"@en ;    rdfs:domain wko:Customer ;      rdfs:range xsd:string .
+wko:partNumber    a owl:DatatypeProperty ; rdfs:subPropertyOf wko:identifier ; rdfs:label "part number"@en ;    rdfs:domain wko:Part ;          rdfs:range xsd:string .
+wko:supplierCode  a owl:DatatypeProperty ; rdfs:subPropertyOf wko:identifier ; rdfs:label "supplier code"@en ;  rdfs:domain wko:Supplier ;      rdfs:range xsd:string .
+wko:roNumber      a owl:DatatypeProperty ; rdfs:subPropertyOf wko:identifier ; rdfs:label "repair order number"@en ; rdfs:domain wko:RepairOrder ; rdfs:range xsd:string .
+wko:categoryCode  a owl:DatatypeProperty ; rdfs:subPropertyOf wko:identifier, skos:notation ; rdfs:label "category code"@en ; rdfs:domain wko:PartCategory ; rdfs:range xsd:string .
+
+# Warranty claim
+wko:claimDate        a owl:DatatypeProperty ; rdfs:label "claim date"@en ;        rdfs:domain wko:WarrantyClaim ; rdfs:range xsd:date .
+wko:failureCode      a owl:DatatypeProperty ; rdfs:label "failure code"@en ;      rdfs:domain wko:WarrantyClaim ; rdfs:range xsd:string .
+wko:complaint        a owl:DatatypeProperty ; rdfs:label "complaint"@en ;         rdfs:domain wko:WarrantyClaim ; rdfs:range xsd:string ;
+    skos:definition "What the customer reported (the first of the three Cs: complaint, cause, correction)."@en .
+wko:cause            a owl:DatatypeProperty ; rdfs:label "cause"@en ;             rdfs:domain wko:WarrantyClaim ; rdfs:range xsd:string .
+wko:correction       a owl:DatatypeProperty ; rdfs:label "correction"@en ;        rdfs:domain wko:WarrantyClaim ; rdfs:range xsd:string .
+wko:mileageAtClaim   a owl:DatatypeProperty ; rdfs:label "mileage at claim"@en ;  rdfs:domain wko:WarrantyClaim ; rdfs:range xsd:integer .
+wko:monthsInService  a owl:DatatypeProperty ; rdfs:label "months in service"@en ; rdfs:domain wko:WarrantyClaim ; rdfs:range xsd:integer ;
+    skos:definition "Whole months between the vehicle's in-service date and the claim date (MIS). Derived during transformation."@en .
+wko:laborHours       a owl:DatatypeProperty ; rdfs:label "labor hours"@en ;       rdfs:domain wko:WarrantyClaim ; rdfs:range xsd:decimal .
+wko:laborCost        a owl:DatatypeProperty ; rdfs:label "labor cost (USD)"@en ;  rdfs:domain wko:WarrantyClaim ; rdfs:range xsd:decimal .
+wko:partsCost        a owl:DatatypeProperty ; rdfs:label "parts cost (USD)"@en ;  rdfs:domain wko:WarrantyClaim ; rdfs:range xsd:decimal .
+wko:totalCost        a owl:DatatypeProperty ; rdfs:label "total cost (USD)"@en ;  rdfs:domain wko:WarrantyClaim ; rdfs:range xsd:decimal .
+
+# Vehicle
+wko:make          a owl:DatatypeProperty ; rdfs:label "make"@en ;          rdfs:domain wko:Vehicle ; rdfs:range xsd:string .
+wko:model         a owl:DatatypeProperty ; rdfs:label "model"@en ;         rdfs:domain wko:Vehicle ; rdfs:range xsd:string .
+wko:modelYear     a owl:DatatypeProperty ; rdfs:label "model year"@en ;    rdfs:domain wko:Vehicle ; rdfs:range xsd:integer .
+wko:trim          a owl:DatatypeProperty ; rdfs:label "trim"@en ;          rdfs:domain wko:Vehicle ; rdfs:range xsd:string .
+wko:engine        a owl:DatatypeProperty ; rdfs:label "engine"@en ;        rdfs:domain wko:Vehicle ; rdfs:range xsd:string .
+wko:assemblyPlant a owl:DatatypeProperty ; rdfs:label "assembly plant"@en ; rdfs:domain wko:Vehicle ; rdfs:range xsd:string .
+wko:buildDate     a owl:DatatypeProperty ; rdfs:label "build date"@en ;    rdfs:domain wko:Vehicle ; rdfs:range xsd:date .
+wko:inServiceDate a owl:DatatypeProperty ; rdfs:label "in-service date"@en ; rdfs:domain wko:Vehicle ; rdfs:range xsd:date ;
+    skos:definition "The date the vehicle was delivered to its first retail customer; the warranty clock starts here."@en .
+
+# Parties and places
+wko:city    a owl:DatatypeProperty ; rdfs:label "city"@en ;    rdfs:domain wko:Party ; rdfs:range xsd:string .
+wko:state   a owl:DatatypeProperty ; rdfs:label "state"@en ;   rdfs:domain wko:Party ; rdfs:range xsd:string .
+wko:region  a owl:DatatypeProperty ; rdfs:label "sales region"@en ; rdfs:domain wko:Dealer ; rdfs:range xsd:string .
+wko:country a owl:DatatypeProperty ; rdfs:label "country"@en ; rdfs:domain wko:Organization ; rdfs:range xsd:string .
+
+# Part
+wko:unitCost a owl:DatatypeProperty ; rdfs:label "unit cost (USD)"@en ; rdfs:domain wko:Part ; rdfs:range xsd:decimal .
+wko:standardLaborHours a owl:DatatypeProperty ; rdfs:label "standard labor hours"@en ; rdfs:domain wko:Part ; rdfs:range xsd:decimal ;
+    skos:definition "The labor time the OEM pays for replacing this part (the labor operation's standard time)."@en .
+
+# Repair order
+wko:openDate        a owl:DatatypeProperty ; rdfs:label "open date"@en ;        rdfs:domain wko:RepairOrder ; rdfs:range xsd:date .
+wko:closeDate       a owl:DatatypeProperty ; rdfs:label "close date"@en ;       rdfs:domain wko:RepairOrder ; rdfs:range xsd:date .
+wko:mileageIn       a owl:DatatypeProperty ; rdfs:label "mileage in"@en ;       rdfs:domain wko:RepairOrder ; rdfs:range xsd:integer .
+wko:laborOperation  a owl:DatatypeProperty ; rdfs:label "labor operation"@en ;  rdfs:domain wko:RepairOrder ; rdfs:range xsd:string .
+wko:payType         a owl:DatatypeProperty ; rdfs:label "pay type"@en ;         rdfs:domain wko:RepairOrder ; rdfs:range xsd:string ;
+    skos:definition "Warranty or CustomerPay. Only Warranty repair orders support claims."@en .

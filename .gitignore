@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+cdk.out/
+cdk.context.json
+data/generated/
+build/
+.DS_Store
+*.html.tmp

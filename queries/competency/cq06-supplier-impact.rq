@@ -1,0 +1,22 @@
+# id: cq06
+# title: Supplier impact by model, model year and plant
+# question: For one supplier, which of its parts fail on which models, model years and assembly plants, and how early in service?
+# value: Narrows a supplier issue to the vehicle populations it affects, with months-in-service as an early-failure signal.
+# param: supplierCode | string | ^S[0-9]{2}$ | S01
+PREFIX wko:  <https://warranty.example.com/ontology#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?partNumber ?part ?model ?modelYear ?plant (COUNT(?claim) AS ?claims)
+       (ROUND(SUM(?cost)) AS ?totalCost) (ROUND(AVG(?mis) * 10) / 10 AS ?avgMonthsInService)
+WHERE {
+  VALUES ?supplierCode { "S01" }
+  ?s wko:supplierCode ?supplierCode .
+  ?p wko:suppliedBy ?s ; wko:partNumber ?partNumber ; rdfs:label ?part .
+  ?claim wko:referencesPart ?p ; wko:totalCost ?cost ; wko:monthsInService ?mis ;
+         wko:claimForVehicle ?v .
+  ?v wko:model ?model ; wko:modelYear ?modelYear ; wko:assemblyPlant ?plant .
+}
+GROUP BY ?partNumber ?part ?model ?modelYear ?plant
+ORDER BY DESC(?claims)

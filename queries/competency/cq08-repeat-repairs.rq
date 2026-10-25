@@ -1,0 +1,27 @@
+# id: cq08
+# title: Repeat repairs
+# question: Which vehicles came back with another claim in the same part category within 3 months, and which dealer did the repeat repair?
+# value: Repeat repairs ("comebacks") point to misdiagnosis, workmanship or a part that does not fix the problem.
+# param: maxMonths | integer | ^[0-9]{1,2}$ | 3
+PREFIX wko:  <https://warranty.example.com/ontology#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?vin ?category ?firstClaim ?firstDate ?repeatClaim ?repeatDate ?milesBetween ?dealerCode ?dealer
+WHERE {
+  VALUES ?maxMonths { 3 }
+  ?first  wko:claimForVehicle ?v ; wko:claimNumber ?firstClaim ; wko:claimDate ?firstDate ;
+          wko:monthsInService ?m1 ; wko:mileageAtClaim ?mi1 ;
+          wko:referencesPart/wko:hasCategory ?cat .
+  ?repeat wko:claimForVehicle ?v ; wko:claimNumber ?repeatClaim ; wko:claimDate ?repeatDate ;
+          wko:monthsInService ?m2 ; wko:mileageAtClaim ?mi2 ;
+          wko:referencesPart/wko:hasCategory ?cat ;
+          wko:submittedBy ?d .
+  FILTER(?repeatDate > ?firstDate && ?m2 - ?m1 <= ?maxMonths)
+  ?v wko:vin ?vin .
+  ?cat rdfs:label ?category .
+  ?d wko:dealerCode ?dealerCode ; rdfs:label ?dealer .
+  BIND(?mi2 - ?mi1 AS ?milesBetween)
+}
+ORDER BY ?dealerCode ?firstDate

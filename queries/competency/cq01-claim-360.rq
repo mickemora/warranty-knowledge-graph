@@ -1,0 +1,32 @@
+# id: cq01
+# title: Claim 360
+# question: For a given claim, which vehicle, owner, dealer, repair order, causal part, supplier and vehicle system are involved?
+# value: Replaces looking a claim up in four systems (claims, vehicle master, dealer, parts) with one answer.
+# param: claimNumber | string | ^C-[0-9]{5,6}$ | C-100245
+PREFIX wko:  <https://warranty.example.com/ontology#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?claimNumber ?claimDate ?status ?vin ?vehicle ?owner ?dealerCode ?dealer ?roNumber
+       ?partNumber ?part ?category ?system ?supplier ?failureCode ?totalCost
+WHERE {
+  VALUES ?claimNumber { "C-100245" }
+  ?claim wko:claimNumber ?claimNumber ;
+         wko:claimDate ?claimDate ;
+         wko:failureCode ?failureCode ;
+         wko:totalCost ?totalCost ;
+         wko:hasStatus/rdfs:label ?status ;
+         wko:claimForVehicle ?v ;
+         wko:submittedBy ?d ;
+         wko:basedOn ?ro ;
+         wko:referencesPart ?p .
+  ?v  wko:vin ?vin ; rdfs:label ?vehicle .
+  ?d  wko:dealerCode ?dealerCode ; rdfs:label ?dealer .
+  ?ro wko:roNumber ?roNumber .
+  ?p  wko:partNumber ?partNumber ; rdfs:label ?part ;
+      wko:hasCategory/rdfs:label ?category ;
+      wko:suppliedBy/rdfs:label ?supplier .
+  OPTIONAL { ?v wko:ownedBy/rdfs:label ?owner }            # inverse of Customer owns Vehicle
+  OPTIONAL { ?claim wko:affectsSystem/rdfs:label ?system } # derived by the rules
+}

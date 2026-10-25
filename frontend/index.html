@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Warranty Claim Explorer</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="3.2"></circle><circle cx="4" cy="6" r="2"></circle>
+        <circle cx="20" cy="6" r="2"></circle><circle cx="5" cy="19" r="2"></circle>
+        <circle cx="19" cy="19" r="2"></circle>
+        <path d="M6 7l4 3.5M18 7l-4 3.5M6.5 17.5l3.5-3M17.5 17.5l-3.5-3"></path>
+      </svg>
+      <span>Warranty Claim Explorer</span>
+    </div>
+    <form class="search" id="search-form" autocomplete="off" role="search">
+      <svg viewBox="0 0 24 24" class="search-icon" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5L21 21"></path></svg>
+      <input id="search-input" type="search" placeholder="Search by Claim #, VIN, Part, Dealer, or ask a question…" aria-label="Search">
+      <div class="search-results" id="search-results" role="listbox" hidden></div>
+    </form>
+    <div class="env" id="env-badge"></div>
+  </header>
+
+  <div class="layout">
+    <nav class="sidenav" aria-label="Sections">
+      <a href="#/" data-nav="home"><span class="nav-ico" data-icon="search"></span>Search</a>
+      <a href="#/list/claim" data-nav="claim"><span class="nav-ico" data-icon="claim"></span>Claims</a>
+      <a href="#/list/vehicle" data-nav="vehicle"><span class="nav-ico" data-icon="vehicle"></span>Vehicles</a>
+      <a href="#/list/part" data-nav="part"><span class="nav-ico" data-icon="part"></span>Parts</a>
+      <a href="#/list/dealer" data-nav="dealer"><span class="nav-ico" data-icon="dealer"></span>Dealers</a>
+      <a href="#/list/repairOrder" data-nav="repairOrder"><span class="nav-ico" data-icon="repairOrder"></span>Repair Orders</a>
+      <a href="#/list/supplier" data-nav="supplier"><span class="nav-ico" data-icon="supplier"></span>Suppliers</a>
+      <a href="#/list/customer" data-nav="customer"><span class="nav-ico" data-icon="customer"></span>Customers</a>
+      <div class="nav-sep"></div>
+      <a href="#/questions" data-nav="questions"><span class="nav-ico" data-icon="questions"></span>Competency Questions</a>
+      <a href="#/ask" data-nav="ask" id="nav-ask"><span class="nav-ico" data-icon="ask"></span>Ask a Question</a>
+      <div class="nav-foot">Synthetic data · Meridian Motors (fictional)</div>
+    </nav>
+    <main id="view" tabindex="-1"></main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

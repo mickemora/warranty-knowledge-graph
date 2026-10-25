@@ -1,0 +1,18 @@
+# id: cq05
+# title: Supplier exposure
+# question: Which suppliers' parts are behind the most warranty claims and cost?
+# value: Starting point for supplier recovery and supplier quality conversations.
+PREFIX wko:  <https://warranty.example.com/ontology#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?supplierCode ?supplier (COUNT(DISTINCT ?part) AS ?partsInvolved)
+       (COUNT(DISTINCT ?claim) AS ?claims) (COUNT(DISTINCT ?v) AS ?vehicles)
+       (ROUND(SUM(?cost)) AS ?totalCost)
+WHERE {
+  ?s wko:supplierCode ?supplierCode ; rdfs:label ?supplier ; wko:supplies ?part .
+  ?claim wko:referencesPart ?part ; wko:totalCost ?cost ; wko:claimForVehicle ?v .
+}
+GROUP BY ?supplierCode ?supplier
+ORDER BY DESC(?totalCost)

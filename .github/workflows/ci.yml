@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test-and-synth:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install
+        run: |
+          pip install -r requirements-dev.txt
+          npm install -g aws-cdk
+      - name: Unit tests (ontology, SHACL, rules, competency questions, API, Lambdas, CDK)
+        run: pytest -q -rs
+      - name: CDK stack tests must run, not skip
+        run: |
+          pytest -q -rs tests/test_stacks.py | tee /tmp/stack-tests.txt
+          ! grep -q SKIP /tmp/stack-tests.txt
+      - name: CDK synth (environment-agnostic, no AWS credentials needed)
+        run: cdk synth --all --quiet
+      - name: Lambda bundles are complete
+        run: |
+          test -f build/lambda/core/functions/admin/handler.py
+          test -f build/lambda/core/queries/competency/cq10-at-risk-vehicles.rq
+          test -d build/lambda/rdf/rdflib && test -d build/lambda/rdf/pyshacl
+          test -f build/lambda/rdf/ontology/warranty.ttl
+          du -sh build/lambda/*
+      - name: Local explorer smoke test
+        run: |
+          python scripts/serve_local.py --port 8765 &
+          for i in $(seq 1 60); do curl -sf localhost:8765/api/stats > /dev/null && break; sleep 1; done
+          curl -sf localhost:8765/ | grep -q "Warranty Claim Explorer"
+          curl -sf "localhost:8765/api/competency/cq09" | python -c "import json,sys; d=json.load(sys.stdin); assert d['rows'], d"
+          curl -sf "localhost:8765/api/search?q=water%20pump" | python -c "import json,sys; d=json.load(sys.stdin); assert d['results'][0]['identifier']=='16100-WP220', d"

@@ -1,0 +1,36 @@
+# id: cq10
+# title: At-risk vehicles without a claim yet
+# question: Which vehicles from the suspect build window have not had a claim on the part yet, and who owns them?
+# value: Sizes a field action and lists the owners and servicing dealers to contact before the part fails.
+# param: partNumber | string | ^[0-9]{5}-[A-Z0-9]{5}$ | 16100-WP220
+# param: model | string | ^[A-Za-z]{2,20}$ | Aster
+# param: modelYear | integer | ^20[0-9]{2}$ | 2022
+# param: plant | string | ^[A-Za-z .,'-]{2,40}$ | San Marcos, TX
+# param: buildFrom | date | ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ | 2021-09-01
+# param: buildTo | date | ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ | 2021-12-15
+PREFIX wko:  <https://warranty.example.com/ontology#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?vin ?vehicle ?buildDate ?inServiceDate ?owner ?servicingDealer
+WHERE {
+  VALUES ?partNumber { "16100-WP220" }
+  VALUES ?model { "Aster" }
+  VALUES ?modelYear { 2022 }
+  VALUES ?plant { "San Marcos, TX" }
+  VALUES ?buildFrom { "2021-09-01"^^xsd:date }
+  VALUES ?buildTo { "2021-12-15"^^xsd:date }
+  ?p wko:partNumber ?partNumber .
+  ?v wko:model ?model ; wko:modelYear ?modelYear ; wko:assemblyPlant ?plant ;
+     wko:buildDate ?buildDate ; wko:inServiceDate ?inServiceDate ;
+     wko:vin ?vin ; rdfs:label ?vehicle .
+  FILTER(?buildDate >= ?buildFrom && ?buildDate <= ?buildTo)
+  FILTER NOT EXISTS { ?c wko:claimForVehicle ?v ; wko:referencesPart ?p }
+  OPTIONAL {
+    ?v wko:ownedBy ?o .
+    ?o rdfs:label ?owner .
+    OPTIONAL { ?o wko:preferredDealer/rdfs:label ?servicingDealer }
+  }
+}
+ORDER BY ?buildDate

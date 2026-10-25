@@ -1,0 +1,214 @@
+@prefix wko:  <https://warranty.example.com/ontology#> .
+@prefix wks:  <https://warranty.example.com/shapes#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+#################################################################################################
+# SHACL shapes: the business rules a warranty record must satisfy before it enters the graph.
+#
+# Severity
+#   sh:Violation (default)  blocks the load: the pipeline stops before Neptune is touched.
+#   sh:Warning              reported in the data-quality report, does not block the load.
+#
+# Neptune does not enforce SHACL. The pipeline's validate step runs these shapes with pySHACL
+# (functions/rdf_tools) and writes the report to S3. Run them locally with
+#   python scripts/kg.py validate --local
+#################################################################################################
+
+wks: sh:declare [ sh:prefix "wko" ; sh:namespace "https://warranty.example.com/ontology#"^^xsd:anyURI ] .
+
+# ---------------------------------------------------------------------------------------------
+# Warranty claim
+# ---------------------------------------------------------------------------------------------
+wks:WarrantyClaimShape a sh:NodeShape ;
+    sh:targetClass wko:WarrantyClaim ;
+    rdfs:label "Warranty claim rules" ;
+    sh:property [
+        sh:path wko:claimNumber ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:pattern "^C-[0-9]{6}$" ;
+        sh:message "Claim number is required and must look like C-123456." ] ;
+    sh:property [
+        sh:path wko:claimForVehicle ; sh:minCount 1 ; sh:maxCount 1 ; sh:class wko:Vehicle ;
+        sh:message "A claim must be for exactly one known vehicle." ] ;
+    sh:property [
+        sh:path wko:submittedBy ; sh:minCount 1 ; sh:maxCount 1 ; sh:class wko:Dealer ;
+        sh:message "A claim must be submitted by exactly one known dealer." ] ;
+    sh:property [
+        sh:path wko:basedOn ; sh:minCount 1 ; sh:maxCount 1 ; sh:class wko:RepairOrder ;
+        sh:message "A claim must be based on exactly one repair order." ] ;
+    sh:property [
+        sh:path wko:referencesPart ; sh:minCount 1 ; sh:maxCount 1 ; sh:class wko:Part ;
+        sh:message "A claim must name exactly one known causal part." ] ;
+    sh:property [
+        sh:path wko:hasStatus ; sh:minCount 1 ; sh:maxCount 1 ; sh:class wko:ClaimStatus ;
+        sh:message "A claim must have one status from the claim status list." ] ;
+    sh:property [
+        sh:path wko:claimDate ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:date ;
+        sh:message "Claim date is required (xsd:date)." ] ;
+    sh:property [
+        sh:path wko:failureCode ; sh:minCount 1 ; sh:pattern "^[A-Z]+-[A-Z]+$" ;
+        sh:message "Failure code is required, for example COOL-LEAK." ] ;
+    sh:property [
+        sh:path wko:complaint ; sh:minCount 1 ;
+        sh:message "The customer complaint is required." ] ;
+    sh:property [
+        sh:path wko:cause ; sh:minCount 1 ; sh:severity sh:Warning ;
+        sh:message "Cause is missing; root-cause analysis will be weaker." ] ;
+    sh:property [
+        sh:path wko:mileageAtClaim ; sh:minCount 1 ; sh:datatype xsd:integer ;
+        sh:minInclusive 0 ; sh:maxInclusive 60000 ;
+        sh:message "Mileage must be between 0 and the 60,000-mile powertrain limit." ] ;
+    sh:property [
+        sh:path wko:monthsInService ; sh:datatype xsd:integer ;
+        sh:minInclusive 0 ; sh:maxInclusive 60 ;
+        sh:message "Months in service must be between 0 and 60." ] ;
+    sh:property [
+        sh:path wko:laborHours ; sh:minCount 1 ; sh:datatype xsd:decimal ;
+        sh:minInclusive 0 ; sh:maxInclusive 40 ;
+        sh:message "Labor hours must be between 0 and 40." ] ;
+    sh:property [
+        sh:path wko:laborHours ; sh:maxInclusive 8.0 ; sh:severity sh:Warning ;
+        sh:message "More than 8 labor hours on one claim: review against the standard labor time." ] ;
+    sh:property [ sh:path wko:laborCost ; sh:minCount 1 ; sh:datatype xsd:decimal ; sh:minInclusive 0 ;
+        sh:message "Labor cost is required and cannot be negative." ] ;
+    sh:property [ sh:path wko:partsCost ; sh:minCount 1 ; sh:datatype xsd:decimal ; sh:minInclusive 0 ;
+        sh:message "Parts cost is required and cannot be negative." ] ;
+    sh:property [ sh:path wko:totalCost ; sh:minCount 1 ; sh:datatype xsd:decimal ; sh:minInclusive 0 ;
+        sh:message "Total cost is required and cannot be negative." ] ;
+
+    # --- cross-field and cross-entity rules (SHACL-SPARQL) ----------------------------------
+    sh:sparql [
+        sh:message "Total cost {?total} is not labor cost + parts cost ({?expected})." ;
+        sh:prefixes wks: ;
+        sh:select """
+            SELECT $this ?total ?expected WHERE {
+                $this wko:totalCost ?total ; wko:laborCost ?labor ; wko:partsCost ?parts .
+                BIND(?labor + ?parts AS ?expected)
+                FILTER(ABS(?total - ?expected) > 0.01)
+            }""" ] ;
+    sh:sparql [
+        sh:message "Claim date {?claimDate} is before the vehicle's in-service date {?deliveryDate}." ;
+        sh:prefixes wks: ;
+        sh:select """
+            SELECT $this ?claimDate ?deliveryDate WHERE {
+                $this wko:claimDate ?claimDate ; wko:claimForVehicle ?v .
+                ?v wko:inServiceDate ?deliveryDate .
+                FILTER(?claimDate < ?deliveryDate)
+            }""" ] ;
+    sh:sparql [
+        sh:message "The claim's dealer is not the dealer that performed its repair order." ;
+        sh:prefixes wks: ;
+        sh:select """
+            SELECT $this WHERE {
+                $this wko:submittedBy ?dealer ; wko:basedOn ?ro .
+                ?ro wko:performedBy ?roDealer .
+                FILTER(?dealer != ?roDealer)
+            }""" ] ;
+    sh:sparql [
+        sh:message "The claim's vehicle is not the vehicle on its repair order." ;
+        sh:prefixes wks: ;
+        sh:select """
+            SELECT $this WHERE {
+                $this wko:claimForVehicle ?v ; wko:basedOn ?ro .
+                ?ro wko:repairOrderFor ?roVehicle .
+                FILTER(?v != ?roVehicle)
+            }""" ] ;
+    sh:sparql [
+        sh:message "A warranty claim must be based on a Warranty repair order, not {?payType}." ;
+        sh:prefixes wks: ;
+        sh:select """
+            SELECT $this ?payType WHERE {
+                $this wko:basedOn ?ro . ?ro wko:payType ?payType .
+                FILTER(?payType != "Warranty")
+            }""" ] .
+
+# ---------------------------------------------------------------------------------------------
+# Vehicle
+# ---------------------------------------------------------------------------------------------
+wks:VehicleShape a sh:NodeShape ;
+    sh:targetClass wko:Vehicle ;
+    rdfs:label "Vehicle rules" ;
+    sh:property [
+        sh:path wko:vin ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:pattern "^[A-HJ-NPR-Z0-9]{17}$" ;
+        sh:message "VIN must be 17 characters without I, O or Q." ] ;
+    sh:property [ sh:path wko:make ;  sh:minCount 1 ; sh:maxCount 1 ; sh:message "Make is required." ] ;
+    sh:property [ sh:path wko:model ; sh:minCount 1 ; sh:maxCount 1 ; sh:message "Model is required." ] ;
+    sh:property [
+        sh:path wko:modelYear ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ;
+        sh:minInclusive 2015 ; sh:maxInclusive 2027 ;
+        sh:message "Model year must be between 2015 and 2027." ] ;
+    sh:property [ sh:path wko:assemblyPlant ; sh:minCount 1 ; sh:message "Assembly plant is required." ] ;
+    sh:property [ sh:path wko:buildDate ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:date ;
+        sh:lessThan wko:inServiceDate ;
+        sh:message "Build date is required and must be before the in-service date." ] ;
+    sh:property [ sh:path wko:inServiceDate ; sh:maxCount 1 ; sh:datatype xsd:date ] ;
+    sh:property [
+        sh:path [ sh:inversePath wko:owns ] ; sh:minCount 1 ; sh:class wko:Customer ;
+        sh:message "Every vehicle must have a registered owner (a customer who owns it)." ] ;
+    sh:property [ sh:path wko:sellingDealer ; sh:maxCount 1 ; sh:class wko:Dealer ] .
+
+# ---------------------------------------------------------------------------------------------
+# Dealer, customer, supplier
+# ---------------------------------------------------------------------------------------------
+wks:DealerShape a sh:NodeShape ;
+    sh:targetClass wko:Dealer ;
+    sh:property [ sh:path wko:dealerCode ; sh:minCount 1 ; sh:maxCount 1 ; sh:pattern "^D[0-9]{3}$" ;
+        sh:message "Dealer code must look like D014." ] ;
+    sh:property [ sh:path rdfs:label ; sh:minCount 1 ; sh:message "Dealer name is required." ] ;
+    sh:property [ sh:path wko:state ; sh:pattern "^[A-Z]{2}$" ; sh:message "State must be a 2-letter code." ] ;
+    sh:property [ sh:path wko:region ; sh:minCount 1 ;
+        sh:in ( "South Central" "Southeast" "Mountain" "Midwest" "Northeast" "West" ) ;
+        sh:message "Region must be one of the sales regions." ] .
+
+wks:CustomerShape a sh:NodeShape ;
+    sh:targetClass wko:Customer ;
+    sh:property [ sh:path wko:customerId ; sh:minCount 1 ; sh:maxCount 1 ; sh:pattern "^CU[0-9]{5}$" ;
+        sh:message "Customer ID must look like CU00001." ] ;
+    sh:property [ sh:path wko:preferredDealer ; sh:maxCount 1 ; sh:class wko:Dealer ] .
+
+wks:SupplierShape a sh:NodeShape ;
+    sh:targetClass wko:Supplier ;
+    sh:property [ sh:path wko:supplierCode ; sh:minCount 1 ; sh:maxCount 1 ; sh:pattern "^S[0-9]{2}$" ;
+        sh:message "Supplier code must look like S01." ] ;
+    sh:property [ sh:path rdfs:label ; sh:minCount 1 ; sh:message "Supplier name is required." ] ;
+    sh:property [ sh:path wko:country ; sh:pattern "^[A-Z]{2}$" ; sh:message "Country must be an ISO 3166 alpha-2 code." ] .
+
+# ---------------------------------------------------------------------------------------------
+# Part
+# ---------------------------------------------------------------------------------------------
+wks:PartShape a sh:NodeShape ;
+    sh:targetClass wko:Part ;
+    sh:property [ sh:path wko:partNumber ; sh:minCount 1 ; sh:maxCount 1 ; sh:pattern "^[0-9]{5}-[A-Z0-9]{5}$" ;
+        sh:message "Part number must look like 16100-WP220." ] ;
+    sh:property [ sh:path rdfs:label ; sh:minCount 1 ; sh:message "Part name is required." ] ;
+    sh:property [ sh:path wko:suppliedBy ; sh:minCount 1 ; sh:maxCount 1 ; sh:class wko:Supplier ;
+        sh:message "Every part must have exactly one known supplier." ] ;
+    sh:property [ sh:path wko:hasCategory ; sh:minCount 1 ; sh:maxCount 1 ; sh:class wko:PartCategory ;
+        sh:message "Every part must be in exactly one part category." ] ;
+    sh:property [ sh:path wko:unitCost ; sh:datatype xsd:decimal ; sh:minExclusive 0 ;
+        sh:message "Unit cost must be positive." ] ;
+    sh:property [ sh:path wko:standardLaborHours ; sh:minCount 1 ; sh:datatype xsd:decimal ; sh:minExclusive 0 ;
+        sh:message "Standard labor hours are required and must be positive." ] .
+
+# ---------------------------------------------------------------------------------------------
+# Repair order
+# ---------------------------------------------------------------------------------------------
+wks:RepairOrderShape a sh:NodeShape ;
+    sh:targetClass wko:RepairOrder ;
+    sh:property [ sh:path wko:roNumber ; sh:minCount 1 ; sh:maxCount 1 ; sh:pattern "^RO-[0-9]{6}$" ;
+        sh:message "Repair order number must look like RO-987654." ] ;
+    sh:property [ sh:path wko:repairOrderFor ; sh:minCount 1 ; sh:maxCount 1 ; sh:class wko:Vehicle ;
+        sh:message "A repair order must be for exactly one known vehicle." ] ;
+    sh:property [ sh:path wko:performedBy ; sh:minCount 1 ; sh:maxCount 1 ; sh:class wko:Dealer ;
+        sh:message "A repair order must be performed by exactly one known dealer." ] ;
+    sh:property [ sh:path wko:openDate ; sh:minCount 1 ; sh:datatype xsd:date ;
+        sh:lessThanOrEquals wko:closeDate ;
+        sh:message "Open date is required and must not be after the close date." ] ;
+    sh:property [ sh:path wko:payType ; sh:minCount 1 ; sh:in ( "Warranty" "CustomerPay" ) ;
+        sh:message "Pay type must be Warranty or CustomerPay." ] ;
+    sh:property [ sh:path wko:mileageIn ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ;
+    sh:property [ sh:path wko:replacedPart ; sh:class wko:Part ;
+        sh:message "Replaced parts must be known parts." ] .

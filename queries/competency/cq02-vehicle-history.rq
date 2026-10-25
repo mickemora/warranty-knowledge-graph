@@ -1,0 +1,32 @@
+# id: cq02
+# title: Vehicle service and claim history
+# question: What is the full repair and warranty history of a vehicle, in date order?
+# value: Investigators see every visit and claim for a VIN in one timeline, across dealers and pay types.
+# param: vin | string | ^[A-HJ-NPR-Z0-9]{17}$ | 5MRASAC25NS123456
+PREFIX wko:  <https://warranty.example.com/ontology#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?date ?event ?number ?dealer ?mileage ?detail ?cost
+WHERE {
+  VALUES ?vin { "5MRASAC25NS123456" }
+  ?v wko:vin ?vin .
+  {
+    ?v wko:hasRepairOrder ?ro .
+    ?ro wko:roNumber ?number ; wko:openDate ?date ; wko:payType ?payType ;
+        wko:performedBy/rdfs:label ?dealer ; wko:mileageIn ?mileage ;
+        wko:laborOperation ?detail .
+    BIND(CONCAT("Repair order (", ?payType, ")") AS ?event)
+  }
+  UNION
+  {
+    ?v wko:hasClaim ?c .
+    ?c wko:claimNumber ?number ; wko:claimDate ?date ; wko:submittedBy/rdfs:label ?dealer ;
+       wko:mileageAtClaim ?mileage ; wko:totalCost ?cost ; wko:failureCode ?failureCode ;
+       wko:referencesPart/rdfs:label ?part .
+    BIND("Warranty claim" AS ?event)
+    BIND(CONCAT(?part, " (", ?failureCode, ")") AS ?detail)
+  }
+}
+ORDER BY ?date ?event
