@@ -26,9 +26,9 @@ from aws_cdk import (
 from constructs import Construct
 
 from infra.core_stack import READ_ACTIONS, WarrantyCoreStack
+from warranty_kg.nlq import DEFAULT_MODEL
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_MODEL = "global.anthropic.claude-sonnet-5"
 
 
 class WarrantyAppStack(Stack):

@@ -172,7 +172,7 @@ Claims**. Click any node to re-center on it. The left navigation lists every ent
 **Prerequisites:** an AWS account and credentials, Python 3.11+, Node.js 18+, the CDK CLI
 (`npm install -g aws-cdk`). Internet access at synth time (pip downloads rdflib and pySHACL for
 the RDF-tools Lambda; no Docker needed). For natural-language search, access to an Anthropic
-Claude model in Amazon Bedrock.
+Claude model in Amazon Bedrock (Claude Sonnet 4.5 by default).
 
 ```bash
 git clone https://github.com/mickemora/warranty-knowledge-graph && cd warranty-knowledge-graph
@@ -199,7 +199,7 @@ Options (`cdk deploy --all -c key=value`):
 | Context key | Default | Effect |
 |---|---|---|
 | `nlq` | `true` | Natural-language search with Amazon Bedrock (`false` to leave it out) |
-| `nlqModelId` | `global.anthropic.claude-sonnet-5` | Any Bedrock model ID or inference profile that supports the Converse API |
+| `nlqModelId` | `global.anthropic.claude-sonnet-4-5-20250929-v1:0` (Claude Sonnet 4.5, global cross-Region inference) | Any Bedrock model ID or inference profile that supports the Converse API. Use `us.anthropic.claude-sonnet-4-5-20250929-v1:0` to keep inference in US regions |
 | `notebook` | `false` | Neptune workbench notebook with Graph Explorer (ml.t3.medium, billed while running) |
 | `autoLoad` | `true` | Run the pipeline on deploys that change the data, ontology, shapes or mapping code |
 | `minNcu` / `maxNcu` | `1` / `8` | Neptune Serverless capacity range |

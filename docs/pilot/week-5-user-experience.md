@@ -36,7 +36,7 @@ Content-Security-Policy and needs no CDN.
 
 ## Natural-language search (optional)
 
-`POST /api/nlq` sends the question to a Lambda function that asks Claude on Amazon Bedrock to write
+`POST /api/nlq` sends the question to a Lambda function that asks Claude Sonnet 4.5 on Amazon Bedrock to write
 one SPARQL query using only the ontology's terms (the prompt includes a schema generated from
 `ontology/warranty.ttl` and the ten competency questions as examples). The query is checked
 (read-only, no `SERVICE`, row limit, parses), executed by the read-only explorer Lambda inside the

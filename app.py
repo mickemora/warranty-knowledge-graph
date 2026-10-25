@@ -7,7 +7,8 @@ Context overrides (cdk deploy --all -c key=value):
   autoLoad               default true: run the load pipeline on every deploy that changes data,
                          ontology, shapes or mapping code; -c autoLoad=false to run it by hand
   nlq                    default true: natural-language search with Amazon Bedrock
-  nlqModelId             default global.anthropic.claude-sonnet-5 (any Bedrock model or
+  nlqModelId             default global.anthropic.claude-sonnet-4-5-20250929-v1:0
+                         (Claude Sonnet 4.5; any Bedrock model or
                          inference profile that supports the Converse API)
   notebook               default false: Neptune workbench notebook + Graph Explorer
                          (ml.t3.medium, billed while running)

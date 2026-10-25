@@ -25,7 +25,10 @@ from warranty_kg import competency
 from warranty_kg.namespaces import PREFIXES, WKO
 from warranty_kg.sparql import SparqlError, ensure_read_only
 
-DEFAULT_MODEL = "global.anthropic.claude-sonnet-5"
+# Claude Sonnet 4.5 through the global cross-Region inference profile, which most Bedrock
+# regions can call. Override with NLQ_MODEL_ID (Lambda) or `-c nlqModelId=` (CDK), for example
+# us.anthropic.claude-sonnet-4-5-20250929-v1:0 to keep inference in US regions.
+DEFAULT_MODEL = "global.anthropic.claude-sonnet-4-5-20250929-v1:0"
 ROOT = Path(__file__).resolve().parent.parent
 ONTOLOGY = Path(os.environ.get("ONTOLOGY_FILE") or ROOT / "ontology" / "warranty.ttl")
 MAX_ROWS = 100

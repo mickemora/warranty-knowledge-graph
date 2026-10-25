@@ -58,7 +58,8 @@ def test_functions(templates):
         "Handler": "functions.explorer_api.handler.handler", "VpcConfig": Match.any_value()})
     app.has_resource_properties("AWS::Lambda::Function", {
         "Handler": "functions.nlq.handler.handler",
-        "Environment": {"Variables": Match.object_like({"NLQ_MODEL_ID": Match.any_value()})}})
+        "Environment": {"Variables": Match.object_like({
+            "NLQ_MODEL_ID": "global.anthropic.claude-sonnet-4-5-20250929-v1:0"})}})
 
 
 def test_least_privilege(templates):
