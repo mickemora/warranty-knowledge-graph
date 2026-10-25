@@ -7,6 +7,9 @@ on:
 jobs:
   test-and-synth:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash          # -eo pipefail, so `| tee` keeps the exit code
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -20,13 +23,13 @@ jobs:
           pip install -r requirements-dev.txt
           npm install -g aws-cdk
       - name: Unit tests (ontology, SHACL, rules, competency questions, API, Lambdas, CDK)
-        run: pytest -q -rs
+        run: pytest -q -rs --junitxml=pytest-report.xml 2>&1 | tee ci-step.log
       - name: CDK stack tests must run, not skip
         run: |
           pytest -q -rs tests/test_stacks.py | tee /tmp/stack-tests.txt
           ! grep -q SKIP /tmp/stack-tests.txt
       - name: CDK synth (environment-agnostic, no AWS credentials needed)
-        run: cdk synth --all --quiet
+        run: cdk synth --all --quiet 2>&1 | tee ci-step.log
       - name: Lambda bundles are complete
         run: |
           test -f build/lambda/core/functions/admin/handler.py
@@ -36,8 +39,23 @@ jobs:
           du -sh build/lambda/*
       - name: Local explorer smoke test
         run: |
-          python scripts/serve_local.py --port 8765 &
-          for i in $(seq 1 60); do curl -sf localhost:8765/api/stats > /dev/null && break; sleep 1; done
+          python scripts/serve_local.py --port 8765 > ci-step.log 2>&1 &
+          for i in $(seq 1 90); do curl -sf localhost:8765/api/stats > /dev/null && break; sleep 1; done
           curl -sf localhost:8765/ | grep -q "Warranty Claim Explorer"
           curl -sf "localhost:8765/api/competency/cq09" | python -c "import json,sys; d=json.load(sys.stdin); assert d['rows'], d"
           curl -sf "localhost:8765/api/search?q=water%20pump" | python -c "import json,sys; d=json.load(sys.stdin); assert d['results'][0]['identifier']=='16100-WP220', d"
+      - name: Report failures as annotations
+        if: failure()
+        run: |
+          python - <<'PY'
+          import os, xml.etree.ElementTree as ET
+          def esc(s): return s.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+          if os.path.exists("pytest-report.xml"):
+              for case in ET.parse("pytest-report.xml").iter("testcase"):
+                  for bad in list(case.iter("failure")) + list(case.iter("error")):
+                      text = (bad.get("message") or "") + "\n" + (bad.text or "")[-3000:]
+                      print(f"::error title={case.get('classname')}.{case.get('name')}::{esc(text)}")
+          if os.path.exists("ci-step.log"):
+              tail = open("ci-step.log", errors="replace").read()[-6000:]
+              print(f"::error title=last step output::{esc(tail)}")
+          PY
