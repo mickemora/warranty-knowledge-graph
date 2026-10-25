@@ -19,11 +19,14 @@ from warranty_kg.sparql import SparqlError
 
 log = logging.getLogger()
 log.setLevel(logging.INFO)
-_lambda = boto3.client("lambda")
+_lambda = None
 _nlq = None
 
 
 def execute(query: str) -> list[dict]:
+    global _lambda
+    if _lambda is None:
+        _lambda = boto3.client("lambda")
     resp = _lambda.invoke(FunctionName=os.environ["EXPLORER_FUNCTION"],
                           Payload=json.dumps({"action": "sparql_select", "query": query}))
     out = json.loads(resp["Payload"].read())

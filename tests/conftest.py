@@ -1,3 +1,4 @@
+import os
 import sys
 import types
 from pathlib import Path
@@ -6,6 +7,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")   # boto3 clients built at import time
 
 # The Lambda handlers import boto3 at module load; stub it where it isn't installed.
 try:
