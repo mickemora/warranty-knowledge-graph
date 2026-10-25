@@ -8,7 +8,7 @@ Explorer** web app, with optional natural-language search on **Amazon Bedrock**.
 
 ![Warranty Knowledge Connectivity Pilot: a 6-week journey to a smarter, more connected warranty organization](docs/images/pilot-infographic.jpg)
 
-> All data is synthetic. The OEM ("Meridian Motors"), its models, dealers, suppliers and
+> All data is synthetic. The OEM ("Meridian L. Motors"), its models, dealers, suppliers and
 > customers are fictional; only city names are real.
 
 **Contents:**
